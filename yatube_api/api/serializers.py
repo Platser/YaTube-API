@@ -1,4 +1,4 @@
-from posts.models import Comment, Follow, Group, Post
+from posts.models import Comment, Follow, Group, Post, User
 from rest_framework import serializers
 from rest_framework.relations import SlugRelatedField
 
@@ -28,6 +28,33 @@ class GroupSerializer(serializers.ModelSerializer):
 
 
 class FollowSerializer(serializers.ModelSerializer):
+    following = serializers.SlugRelatedField(
+        slug_field='username',
+        queryset=User.objects.all()
+    )
+    user = serializers.SlugRelatedField(
+        read_only=True, slug_field='username',
+        default=serializers.CurrentUserDefault(),
+    )
+
     class Meta:
         model = Follow
         fields = '__all__'
+        validators = [
+            serializers.UniqueTogetherValidator(
+                queryset=Follow.objects.all(),
+                fields=('user', 'following'),
+            )
+        ]
+
+    def validate_following(self, following):
+        try:
+            User.objects.get(username=following)
+        except User.DoesNotExist:
+            raise serializers.ValidationError(
+                f'Пользователя с именем {following} не существует.')
+        if self.context['request'].user == following:
+            raise serializers.ValidationError(
+                'Нельзя подписываться на самого себя.'
+            )
+        return following
