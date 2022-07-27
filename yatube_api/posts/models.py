@@ -51,8 +51,5 @@ class Follow(models.Model):
         related_name='following'
     )
 
-    class Meta:
-        ordering = ('user__username', 'following__username')
-
     def __str__(self):
         return f'{self.user.username} follows {self.following.username}'
